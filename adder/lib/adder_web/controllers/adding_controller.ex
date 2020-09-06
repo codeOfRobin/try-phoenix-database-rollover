@@ -4,16 +4,21 @@ defmodule AdderWeb.AddingController do
   require Adder.Repo
 
   def add(conn, _params) do
-    addition =
-      Adder.Addition
-      |> Ecto.Query.first()
-      |> Ecto.Query.lock("FOR UPDATE")
-      |> Adder.Repo.one()
+    {:ok, dict} =
+      Adder.Repo.transaction(fn ->
+        addition =
+          Adder.Addition
+          |> Ecto.Query.first()
+          |> Ecto.Query.lock("FOR UPDATE")
+          |> Adder.Repo.one()
 
-    changeset = Adder.Addition.changeset(addition, %{sum: addition.sum + 1})
-    Adder.Repo.update(changeset)
+        changeset = Adder.Addition.changeset(addition, %{sum: addition.sum + 1})
+        Adder.Repo.update(changeset)
 
-    json(conn, %{sum: addition.sum + 1})
+        %{sum: addition.sum + 1}
+      end)
+
+    json(conn, dict)
   end
 
   def reset() do
